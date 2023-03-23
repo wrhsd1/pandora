@@ -13,11 +13,10 @@ from .bots.server import ChatBot as ChatBotServer
 from .exts import sentry
 from .exts.config import USER_CONFIG_DIR
 from .exts.hooks import hook_except_handle
-from .migrations import migrate
+from .exts.token import check_access_token_out
 from .openai.api import ChatGPT
 from .openai.auth import Auth0
 from .openai.utils import Console
-from .turbo.chat import TurboGPT
 
 if 'nt' == os.name:
     import pyreadline3 as readline
@@ -72,7 +71,12 @@ def confirm_access_token(token_file=None, silence=False):
         confirm = 'y' if silence else Prompt.ask('A saved access token has been detected. Do you want to use it?',
                                                  choices=['y', 'n', 'del'], default='y')
         if 'y' == confirm:
-            return read_access_token(app_token_file), False
+            access_token = read_access_token(app_token_file)
+            if not check_access_token_out(access_token):
+                os.remove(app_token_file)
+                return None, True
+
+            return access_token, False
         elif 'del' == confirm:
             os.remove(app_token_file)
 
@@ -81,16 +85,6 @@ def confirm_access_token(token_file=None, silence=False):
 
 def main():
     global __show_verbose
-
-    Console.debug_b('''
-   ▄▀▀▄▀▀▀▄  ▄▀▀█▄   ▄▀▀▄ ▀▄  ▄▀▀█▄▄   ▄▀▀▀▀▄   ▄▀▀▄▀▀▀▄  ▄▀▀█▄  
-  █   █   █ ▐ ▄▀ ▀▄ █  █ █ █ █ ▄▀   █ █      █ █   █   █ ▐ ▄▀ ▀▄ 
-  ▐  █▀▀▀▀    █▄▄▄█ ▐  █  ▀█ ▐ █    █ █      █ ▐  █▀▀█▀    █▄▄▄█ 
-     █       ▄▀   █   █   █    █    █ ▀▄    ▄▀  ▄▀    █   ▄▀   █ 
-   ▄▀       █   ▄▀  ▄▀   █    ▄▀▄▄▄▄▀   ▀▀▀▀   █     █   █   ▄▀  
-  █         ▐   ▐   █    ▐   █     ▐           ▐     ▐   ▐   ▐   
-  ▐                 ▐        ▐                                   
-       ''')
 
     Console.debug_b(
         '''
@@ -153,7 +147,15 @@ def main():
     if args.sentry:
         sentry.init(args.proxy)
 
-    migrate.do_migrate()
+    if args.api:
+        try:
+            from .openai.token import gpt_num_tokens
+            from .migrations.migrate import do_migrate
+
+            do_migrate()
+        except (ImportError, ModuleNotFoundError):
+            Console.error_bh('### You need `pip install Pandora-ChatGPT[api]` to support API mode.')
+            return
 
     access_token, need_save = confirm_access_token(args.token_file, args.server)
     if not access_token:
@@ -163,11 +165,16 @@ def main():
         Console.warn('### Do login, please wait...')
         access_token = Auth0(email, password, args.proxy).auth()
 
+    if not check_access_token_out(access_token):
+        return
+
     if need_save:
         if args.server or Confirm.ask('Do you want to save your access token for the next login?', default=True):
             save_access_token(access_token)
 
     if args.api:
+        from .turbo.chat import TurboGPT
+
         chatgpt = TurboGPT(access_token, args.proxy)
     else:
         chatgpt = ChatGPT(access_token, args.proxy)

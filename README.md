@@ -9,9 +9,17 @@
 [![PyPi workflow](https://github.com/pengzhile/pandora/actions/workflows/python-publish.yml/badge.svg)](https://github.com/pengzhile/pandora/actions/workflows/python-publish.yml)
 [![Docker workflow](https://github.com/pengzhile/pandora/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/pengzhile/pandora/actions/workflows/docker-publish.yml)
 
-### `潘多拉`，一个命令行的`ChatGPT`。
+### `潘多拉`，一个不只是命令行的`ChatGPT`。
 
 ### 实现了网页版`ChatGPT`的主要操作。能过`Cloudflare`，理论上速度还可以。
+
+## 为什么要用
+
+1. 高峰期能绕过官方限制，继续使用。
+2. 应答速度直逼`PLUS`，白嫖用户的福音。
+3. 官方故障的时候，它可能还是能跑。
+4. 多模式：网页/命令行/API，私有化部署。
+5. 不会像官方那样无故断线、报错。
 
 ## 界面截图
 
@@ -40,9 +48,15 @@
 * pip安装运行
 
   ```shell
-  pip install Pandora-ChatGPT
+  pip install pandora-chatgpt
   pandora
   ```
+  * 如果你想支持`gpt-3.5-turbo`模式：
+
+    ```shell
+    pip install pandora-chatgpt[api]
+    pandora
+    ```
 
 * 编译运行
 
@@ -50,6 +64,13 @@
   pip install .
   pandora
   ```
+  
+  * 如果你想支持`gpt-3.5-turbo`模式：
+
+    ```shell
+    pip install .[api]
+    pandora
+    ```
 
 * Docker Hub运行
 
@@ -111,6 +132,7 @@
 * `/select` 回到选择会话界面。
 * `/reload` 重新加载当前会话所有内容，`F5`你能懂吧。
 * `/regen` 如果对`ChatGPT`当前回答不满意，可以让它重新回答。
+* `/continue` 让`ChatGPT`继续输出回复的剩余部分。
 * `/edit` 编辑你之前的一个提问。
 * `/new` 直接开启一个新会话。
 * `/del` 删除当前会话，回到会话选择界面。
