@@ -29,7 +29,7 @@ class ChatBot:
         hook_logging(level=self.log_level, format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
         self.logger = logging.getLogger('waitress')
 
-    def run(self, bind_str):
+    def run(self, bind_str, threads=8):
         host, port = self.__parse_bind(bind_str)
 
         resource_path = abspath(join(dirname(__file__), '..', 'flask'))
@@ -76,7 +76,7 @@ class ChatBot:
             self.logger.warning('Serving on http://{}:{}'.format(host, port))
 
         WSGIRequestHandler.protocol_version = 'HTTP/1.1'
-        serve(app, host=host, port=port, ident=None)
+        serve(app, host=host, port=port, ident=None, threads=threads)
 
     @staticmethod
     def __after_request(resp):
@@ -198,7 +198,7 @@ class ChatBot:
         return self.__proxy_result(self.chatgpt.list_models(True, self.__get_token_key()))
 
     def list_conversations(self):
-        offset = request.args.get('offset', '1')
+        offset = request.args.get('offset', '0')
         limit = request.args.get('limit', '20')
 
         return self.__proxy_result(self.chatgpt.list_conversations(offset, limit, True, self.__get_token_key()))
@@ -251,11 +251,15 @@ class ChatBot:
 
     def regenerate(self):
         payload = request.json
+
+        conversation_id = payload.get('conversation_id')
+        if not conversation_id:
+            return self.talk()
+
         prompt = payload['prompt']
         model = payload['model']
         message_id = payload['message_id']
         parent_message_id = payload['parent_message_id']
-        conversation_id = payload['conversation_id']
         stream = payload.get('stream', True)
 
         return self.__process_stream(
